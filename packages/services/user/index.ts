@@ -1,8 +1,10 @@
 import { db, eq } from "@repo/database";
 import { usersTable } from "@repo/database/models/user"
+import { refreshTokens } from "@repo/database/models/refereshToken"
 import { regUserViaEmailPassInputType, regUserViaEmailPassInput, loginUserViaEmailPassInput, loginUserViaEmailPassInputType } from "./model";
 import apiErr from "../../utils/api-error"
 import { hashIT, comparePass } from "../../utils/hashIT"
+import { generateAccTok, generateRefTok } from "../../utils/jwtUtils"
 // ++++++++++++++++++++++++++++++++++++++++++++++USER AUTH FLOW++++++++++++++++++++++++++++++++++++++++++++++++++++
 // 1. Exported Class UserService to services/indexe.ts, and then exported it's instance as userService
 // 2. Vannila auth  -> register + login + get user
@@ -12,13 +14,13 @@ import { hashIT, comparePass } from "../../utils/hashIT"
 class UserService {
   private async getUserByEmail(email: string) {
     try {
-          const res = await db.select().from(usersTable).where(eq(usersTable.email, email))
+      const res = await db.select().from(usersTable).where(eq(usersTable.email, email))
 
-    if (!res || res.length == 0) {
-      return null
-    } else {
-      return res[0]
-    }
+      if (!res || res.length == 0) {
+        return null
+      } else {
+        return res[0]
+      }
     } catch (error) {
       console.log("fetUserByEmail ERROR:", error)
       throw error
@@ -44,7 +46,7 @@ class UserService {
 
 
   // register service
-  public async regUserViaEmailPass(payload: regUserViaEmailPassInputType): Promise<{id: string}> {
+  public async regUserViaEmailPass(payload: regUserViaEmailPassInputType): Promise<{ id: string }> {
     try {
       const { fullName, email, password } = await regUserViaEmailPassInput.parseAsync(payload)
 
@@ -68,9 +70,7 @@ class UserService {
   }
 
   //login service
-  public async loginUserViaEmailPass(
-    payload: loginUserViaEmailPassInputType
-  ) {
+  public async loginUserViaEmailPass(payload: loginUserViaEmailPassInputType) {
     try {
       const { email, password } =
         await loginUserViaEmailPassInput.parseAsync(payload);
@@ -90,8 +90,24 @@ class UserService {
         throw apiErr.unauthorizedAccess();
       }
 
+      const accessToken = generateAccTok({ sub: user.id })
+      const refreshToken = generateRefTok({ sub: user.id })
+
+      await db.insert(refreshTokens).values({ userId: user.id, token: refreshToken })
+
+      const sanitizedUser = {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        emailVerified: user.emailVerified,
+      };
       return {
-        id: user.id
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        accessToken,
+        refreshToken
       };
     } catch (error) {
       console.log("++++ login service error ++++");

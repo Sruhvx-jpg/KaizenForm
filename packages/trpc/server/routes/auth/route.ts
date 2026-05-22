@@ -1,14 +1,14 @@
 import { userService } from "../../services";
-import { publicProcedure, router } from "../../trpc";
+import { publicProcedure, protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import {
   regUserViaEmailPassInputModel,
   regUserViaEmailPassOutputModel,
   loginUserViaEmailPassInputModel,
   loginUserViaEmailPassOutputModel,
-  getmeInputModel,
   getmeOutputModel
 } from "./model";
+import z from "zod"
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
@@ -27,7 +27,11 @@ export const authRouter = router({
     .mutation(async ({ input }) => {
       const { fullName, email, password } = input;
 
-      const { id } = await userService.regUserViaEmailPass({fullName, email, password});
+      const { id } = await userService.regUserViaEmailPass({
+        fullName,
+        email,
+        password
+      });
 
       return { id };
     }),
@@ -45,12 +49,13 @@ export const authRouter = router({
     .mutation(async ({ input }) => {
       const { email, password } = input;
 
-      const { id, fullName, email, emailVerified, refreshTokens, accesstoken } = await userService.loginUserViaEmailPass({email, password});
-
-      return { id };
+      return await userService.loginUserViaEmailPass({
+        email,
+        password
+      });
     }),
 
-  getMe: publicProcedure
+  getMe: protectedProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -58,13 +63,9 @@ export const authRouter = router({
         tags: TAGS
       }
     })
-    .input(getmeInputModel)
+    .input(z.void())
     .output(getmeOutputModel)
-    .query(async ({ input }) => {
-      const { id } = input;
-
-      const user = await userService.getMe(id);
-
-      return user;
+    .query(async ({ ctx }: any) => {
+      return await userService.getMe(ctx.user.sub);
     })
 });

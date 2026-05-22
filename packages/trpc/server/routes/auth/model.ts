@@ -19,7 +19,7 @@ const loginUserViaEmailPassOutputModel = z.object({
   id: z.string(),
   fullName: z.string(),
   email: z.string(),
-  emailVerified: z.boolean(),
+  emailVerified: z.any(),
   accessToken: z.string(),
   refreshToken: z.string()
 });
@@ -28,7 +28,6 @@ const getmeOutputModel = z.object({
   id: z.string(),
   fullName: z.string(),
   email: z.string(),
-  emailVerified: z.boolean()
 });
 
 export {
