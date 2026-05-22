@@ -39,21 +39,12 @@ const fixedWindowRateLimiter = tRPCContext.middleware(async ({ ctx, next }: any)
 })
 
 const authMiddleware = tRPCContext.middleware(async ({ ctx, next }: any) => {
-  const authHeader = ctx.req.headers.authorization;
+  const token = ctx.req.cookies?.accessToken;
 
-  if (!authHeader) {
+  if (!token) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Authorization header missing"
-    });
-  }
-
-  const [scheme, token] = authHeader.split(" ");
-
-  if (scheme !== "Bearer" || !token) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Invalid authorization format"
+      message: "Access token missing",
     });
   }
 
@@ -63,13 +54,13 @@ const authMiddleware = tRPCContext.middleware(async ({ ctx, next }: any) => {
     return next({
       ctx: {
         ...ctx,
-        user: payload
-      }
+        user: payload,
+      },
     });
   } catch {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Invalid or expired access token"
+      message: "Invalid or expired access token",
     });
   }
 });
