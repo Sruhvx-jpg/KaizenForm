@@ -3,63 +3,37 @@ import { OpenApiMeta } from "trpc-to-openapi";
 
 import { createContext } from "./context";
 import { verifyAccTok } from "../../utils/jwtUtils";
+import { redis } from "../../utils/initRedis"
 
 export const tRPCContext = initTRPC
   .meta<OpenApiMeta>()
   .context<typeof createContext>()
   .create({});
 
-const rateLimitStore = new Map<
-  string,
-  {
-    count: number;
-    resetAt: number;
-  }
->();
+
 
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS = 10;
 
-const rateLimitMiddleware = tRPCContext.middleware(async ({ ctx, path, next }: any) => {
-  const ip =
-    ctx.req.headers["x-forwarded-for"]?.toString() ||
-    ctx.req.socket.remoteAddress ||
-    "unknown";
+const fixedWindowRateLimiter = tRPCContext.middleware(async ({ ctx, next }: any) => {
+  const ip = ctx.req.headers.get("x-forwarded-for")?.split(",")[0]!
 
-  const key = `${ip}:${path}`;
-  const now = Date.now();
+  const key = `FWRL:${ip}`
+  const curr = await redis.incr(key)
 
-  const existing = rateLimitStore.get(key);
-
-  if (!existing) {
-    rateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + WINDOW_MS
-    });
-
-    return next();
+  if (curr === 1) {
+    await redis.expire(key, 60)
   }
 
-  if (now > existing.resetAt) {
-    rateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + WINDOW_MS
-    });
-
-    return next();
-  }
-
-  if (existing.count >= MAX_REQUESTS) {
+  if (curr > 5) {
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
-      message: "Rate limit exceeded"
+      message: "Too many requests. Try again later.",
     });
   }
 
-  existing.count += 1;
-
   return next();
-});
+})
 
 const authMiddleware = tRPCContext.middleware(async ({ ctx, next }: any) => {
   const authHeader = ctx.req.headers.authorization;
@@ -104,5 +78,5 @@ export const publicProcedure =
 
 export const protectedProcedure =
   tRPCContext.procedure
-    .use(rateLimitMiddleware)
+    .use(fixedWindowRateLimiter)
     .use(authMiddleware);
