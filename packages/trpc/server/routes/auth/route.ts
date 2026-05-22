@@ -1,6 +1,6 @@
 import { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import { userService } from "../../services";
-import { publicProcedure, protectedProcedure, router } from "../../trpc";
+import { publicProcedure, protectedProcedure, router, FWRLpublicProcedure } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import {
   regUserViaEmailPassInputModel,
@@ -41,7 +41,7 @@ export const authRouter = router({
       return { id };
     }),
 
-  loginUserViaEmailPass: publicProcedure
+  loginUserViaEmailPass: FWRLpublicProcedure
     .meta({
       openapi: {
         method: "POST",
@@ -52,6 +52,7 @@ export const authRouter = router({
     .input(loginUserViaEmailPassInputModel)
     .output(loginUserViaEmailPassOutputModel)
     .mutation(async ({ input, ctx }) => {
+      console.log(input)
       const result = await userService.loginUserViaEmailPass(input);
 
       ctx.res.setHeader("Set-Cookie", [
@@ -67,7 +68,7 @@ export const authRouter = router({
       };
     }),
 
-  getMe: publicProcedure
+  getMe: protectedProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -98,7 +99,7 @@ export const authRouter = router({
     }),
 
 
-  refreshAccessToken: publicProcedure
+  refreshAccessToken: protectedProcedure
     .meta({
       openapi: {
         method: "POST",
@@ -135,6 +136,4 @@ export const authRouter = router({
         success: true
       }
     })
-
-
 });

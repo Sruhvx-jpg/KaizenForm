@@ -16,10 +16,13 @@ const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS = 10;
 
 const fixedWindowRateLimiter = tRPCContext.middleware(async ({ ctx, next }: any) => {
-  const ip = ctx.req.headers.get("x-forwarded-for")?.split(",")[0]!
+  //const ip = (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]  ?? ctx.req.ip 
+  const ip = ctx.req.ip
 
   const key = `FWRL:${ip}`
+  console.log("KEY: ", key)
   const curr = await redis.incr(key)
+  console.log("current key:", curr)
 
   if (curr === 1) {
     await redis.expire(key, 60)
@@ -75,6 +78,10 @@ export const router = tRPCContext.router;
 
 export const publicProcedure =
   tRPCContext.procedure;
+
+export const FWRLpublicProcedure  = 
+  tRPCContext.procedure
+    .use(fixedWindowRateLimiter)
 
 export const protectedProcedure =
   tRPCContext.procedure
