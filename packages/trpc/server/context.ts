@@ -1,2 +1,6 @@
-export async function createContext({}) {}
-export type Context = Awaited<ReturnType<typeof createContext>>;
+import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
+
+export const createContext = ({ req, res }: CreateHTTPContextOptions) => ({
+  req,
+  res
+});

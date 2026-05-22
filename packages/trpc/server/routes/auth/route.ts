@@ -1,3 +1,4 @@
+import { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import { userService } from "../../services";
 import { publicProcedure, protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
@@ -6,8 +7,12 @@ import {
   regUserViaEmailPassOutputModel,
   loginUserViaEmailPassInputModel,
   loginUserViaEmailPassOutputModel,
-  getmeOutputModel
+  getmeOutputModel,
+  getmeInputModel,
+  refreshAccessTokenOutputModel,
+  refreshAccessTokenInputputModel
 } from "./model";
+import { verifyAccTok } from "../../../../utils/jwtUtils"
 import z from "zod"
 
 const TAGS = ["Authentication"];
@@ -46,16 +51,23 @@ export const authRouter = router({
     })
     .input(loginUserViaEmailPassInputModel)
     .output(loginUserViaEmailPassOutputModel)
-    .mutation(async ({ input }) => {
-      const { email, password } = input;
+    .mutation(async ({ input, ctx }) => {
+      const result = await userService.loginUserViaEmailPass(input);
 
-      return await userService.loginUserViaEmailPass({
-        email,
-        password
-      });
+      ctx.res.setHeader("Set-Cookie", [
+        `accessToken=${result.accessToken}; HttpOnly; Path=/; SameSite=Lax`,
+        `refreshToken=${result.refreshToken}; HttpOnly; Path=/; SameSite=Lax`
+      ]);
+
+      return {
+        id: result.id,
+        fullName: result.fullName,
+        email: result.email,
+        emailVerified: result.emailVerified
+      };
     }),
 
-  getMe: protectedProcedure
+  getMe: publicProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -63,9 +75,66 @@ export const authRouter = router({
         tags: TAGS
       }
     })
-    .input(z.void())
     .output(getmeOutputModel)
-    .query(async ({ ctx }: any) => {
-      return await userService.getMe(ctx.user.sub);
+    .query(async ({ ctx }) => {
+      const cookies = ctx.req.headers.cookie;
+
+      if (!cookies) {
+        throw new Error("No cookies found");
+      }
+
+      const accessToken = cookies
+        .split("; ")
+        .find((cookie) => cookie.startsWith("accessToken="))
+        ?.split("=")[1];
+
+      if (!accessToken) {
+        throw new Error("Access token missing");
+      }
+
+      const payload = verifyAccTok(accessToken);
+
+      return await userService.getMe(payload.sub);
+    }),
+
+
+  refreshAccessToken: publicProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/refreshAccessToken"),
+        tags: TAGS
+      }
     })
+    .input(refreshAccessTokenInputputModel)
+    .output(refreshAccessTokenOutputModel)
+    .mutation(async ({ ctx }) => {
+      const cookies = ctx.req.headers.cookie;
+
+      if (!cookies) {
+        throw new Error("No cookies found");
+      }
+
+      const refreshToken = cookies
+        .split("; ")
+        .find((cookie) => cookie.startsWith("refreshToken="))
+        ?.split("=")[1];
+
+      if (!refreshToken) {
+        throw new Error("Refresh token missing")
+      }
+
+      const newAccessToken =
+        await userService.refreshAccessToken(refreshToken);
+
+      ctx.res.setHeader("Set-Cookie", [
+        `accessToken=${newAccessToken}; HttpOnly; Path=/; SameSite=Lax`
+      ])
+
+      return {
+        success: true
+      }
+    })
+
+
 });

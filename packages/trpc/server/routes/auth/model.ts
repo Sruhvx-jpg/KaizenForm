@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { success, z } from "zod";
 
 const regUserViaEmailPassInputModel = z.object({
   fullName: z.string().describe("fullName of user"),
@@ -20,8 +20,6 @@ const loginUserViaEmailPassOutputModel = z.object({
   fullName: z.string(),
   email: z.string(),
   emailVerified: z.any(),
-  accessToken: z.string(),
-  refreshToken: z.string()
 });
 
 const getmeOutputModel = z.object({
@@ -30,10 +28,26 @@ const getmeOutputModel = z.object({
   email: z.string(),
 });
 
+const getmeInputModel = z.object({
+    accessToken: z.string().describe("access token of the user")
+})
+
+const refreshAccessTokenOutputModel = z.object({
+    success: z.boolean().describe("flag for refresh access token endpoint")
+})
+
+const refreshAccessTokenInputputModel = z.object({
+    refreshtoken: z.string().describe("refresh token")
+})
+
+
 export {
   regUserViaEmailPassInputModel,
   regUserViaEmailPassOutputModel,
   loginUserViaEmailPassInputModel,
   loginUserViaEmailPassOutputModel,
-  getmeOutputModel
+  getmeOutputModel,
+  getmeInputModel,
+  refreshAccessTokenOutputModel,
+  refreshAccessTokenInputputModel
 };

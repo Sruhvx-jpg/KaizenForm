@@ -4,11 +4,12 @@ import { refreshTokens } from "@repo/database/models/refereshToken"
 import { regUserViaEmailPassInputType, regUserViaEmailPassInput, loginUserViaEmailPassInput, loginUserViaEmailPassInputType } from "./model";
 import apiErr from "../../utils/api-error"
 import { hashIT, comparePass } from "../../utils/hashIT"
-import { generateAccTok, generateRefTok } from "../../utils/jwtUtils"
+import { generateAccTok, generateRefTok, verifyRefTok } from "../../utils/jwtUtils"
 // ++++++++++++++++++++++++++++++++++++++++++++++USER AUTH FLOW++++++++++++++++++++++++++++++++++++++++++++++++++++
 // 1. Exported Class UserService to services/indexe.ts, and then exported it's instance as userService
 // 2. Vannila auth  -> register + login + get user
 // 3. google oauth flow 
+// 4. service added to refresh the access token
 
 
 class UserService {
@@ -95,12 +96,7 @@ class UserService {
 
       await db.insert(refreshTokens).values({ userId: user.id, token: refreshToken })
 
-      const sanitizedUser = {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        emailVerified: user.emailVerified,
-      };
+
       return {
         id: user.id,
         fullName: user.fullName,
@@ -134,6 +130,25 @@ class UserService {
       throw error;
     }
   }
+
+  public async refreshAccessToken(refreshToken: string) {
+    const payload = verifyRefTok(refreshToken);
+
+    const tokenExists = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.token, refreshToken));
+
+    if (!tokenExists.length) {
+      throw new Error("Invalid refresh token");
+    }
+
+    return generateAccTok({
+      sub: payload.sub
+    });
+  }
 }
 
 export default UserService
+
+
