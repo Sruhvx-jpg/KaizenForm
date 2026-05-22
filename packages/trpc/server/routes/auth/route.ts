@@ -45,7 +45,7 @@ export const authRouter = router({
     .mutation(async ({ input }) => {
       const { email, password } = input;
 
-      const { id } = await userService.loginUserViaEmailPass({email, password});
+      const { id, fullName, email, emailVerified, refreshTokens, accesstoken } = await userService.loginUserViaEmailPass({email, password});
 
       return { id };
     }),
