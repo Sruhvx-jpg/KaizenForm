@@ -5,7 +5,7 @@
     "outDir": "./dist",
 
     "moduleResolution": "nodenext",
-    "module": "CommonJS",
+    "module": "nodenext",
 
     // We don't need these for our final build
     "declarationMap": false,

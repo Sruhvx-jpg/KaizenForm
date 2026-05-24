@@ -20,13 +20,14 @@ const openApiDocument = generateOpenApiDocument(serverRouter, {
   baseUrl: env.BASE_URL.concat("/api"),
 });
 
-if (env.NODE_ENV !== "prod") {
-  app.use(
-    cors({
-      origin: "*",
-    }),
-  );
-}
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "trpc-accept"],
+  }),
+);
 
 app.use(express.json());
 
@@ -61,5 +62,14 @@ app.use(
     createContext,
   }),
 );
+
+app.use((req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error("Error:", err);
+  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
+});
 
 export default app;

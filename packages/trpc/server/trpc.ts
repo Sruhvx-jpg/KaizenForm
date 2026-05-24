@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { OpenApiMeta } from "trpc-to-openapi";
+import superjson from "superjson";
 
 import { createContext } from "./context";
 import { verifyAccTok } from "../../utils/jwtUtils";
@@ -8,7 +9,9 @@ import { redis } from "../../utils/initRedis"
 export const tRPCContext = initTRPC
   .meta<OpenApiMeta>()
   .context<typeof createContext>()
-  .create({});
+  .create({
+    transformer: superjson,
+  });
 
 
 
