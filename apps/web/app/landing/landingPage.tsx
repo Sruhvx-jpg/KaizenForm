@@ -14,7 +14,7 @@ export default function LandingPageComponent({ isAuthenticated }: LandingPageCom
     const handleContinue = () => {
         if (isAuthenticated) {
             // User is authenticated, redirect to main page
-            router.push('/main');
+            router.push('/dashboard');
         } else {
             // User is not authenticated, redirect to signup
             router.push('/signup');

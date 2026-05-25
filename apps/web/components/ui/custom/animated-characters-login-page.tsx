@@ -9,6 +9,7 @@ import { Label } from "~/components/ui/label";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
 import { trpc } from "~/trpc/client";
+import { useLogin} from "~/hooks/api/auth";
 
 
 interface PupilProps {
@@ -308,7 +309,7 @@ function LoginPage() {
   const orangePos = calculatePosition(orangeRef);
 
   const router = useRouter();
-  const { mutateAsync: loginUserViaEmailPassAsync } = trpc.auth.loginUserViaEmailPass.useMutation();
+  const {mutateAsync: loginUserViaEmailPassAsync} = trpc.auth.loginUserViaEmailPass.useMutation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,8 +317,12 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginUserViaEmailPassAsync({ email, password });
-      router.push("/main");
+      const {id, fullName, emailVerified } = await loginUserViaEmailPassAsync({  email, password });
+      console.log("error:", error)
+      console.log("data:", fullName)
+      localStorage.setItem('USER_METADATa', JSON.stringify({id, fullName, emailVerified}))
+
+      router.push("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);

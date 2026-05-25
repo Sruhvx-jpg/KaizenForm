@@ -9,6 +9,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
 import { trpc } from "~/trpc/client";
 import { ShaderBackground } from "../shaders-hero-section";
+import { useSignup } from "~/hooks/api/auth";
 
 
 interface PupilProps {
@@ -308,9 +309,10 @@ function SignupPage() {
   const orangePos = calculatePosition(orangeRef);
 
   const router = useRouter();
-  const { mutateAsync: regUserViaEmailPassAsync } = trpc.auth.regUserViaEmailPass.useMutation();
+ 
 
   const handleSubmit = async (e: React.FormEvent) => {
+    const {regUserViaEmailPassAsync, error} = useSignup()
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -333,7 +335,7 @@ function SignupPage() {
 
     try {
       await regUserViaEmailPassAsync({ fullName, email, password });
-      router.push("/main");
+      router.push("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
